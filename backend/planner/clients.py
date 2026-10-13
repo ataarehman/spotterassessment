@@ -17,6 +17,7 @@ class GeocodeError(Exception):
 
 FORECAST_CACHE_TTL_SECONDS = 600
 _FORECAST_CACHE = {}
+LAST_FORECAST_CALLS = []
 
 
 def clear_forecast_cache():
@@ -76,22 +77,24 @@ def fetch_forecasts(points, start_iso, hours, session=None, sleeper=time.sleep, 
     if not points:
         raise WeatherProviderError("no forecast points")
     http = session or requests
-    forecast_days = _forecast_days(start_iso, hours)
+    window = _forecast_window(start_iso, hours)
     maps = []
     missing = []
     use_cache = session is None if use_cache is None else use_cache
     for point in points:
-        cached = _cache_get(_point_key(point, forecast_days)) if use_cache else None
+        cached = _cache_get(_point_key(point, window)) if use_cache else None
         if cached is None or start_iso not in cached:
             missing.append(point)
             maps.append(None)
         else:
             maps.append(cached)
+    LAST_FORECAST_CALLS.clear()
     if not missing:
         return maps
-    fetched = []
-    for offset in range(0, len(missing), 8):
-        chunk = missing[offset:offset + 8]
+    chunks = [missing[index:index + 20] for index in range(0, len(missing), 20)]
+
+    def fetch_chunk(chunk):
+        started = time.perf_counter()
         response = _get_with_backoff(
             http,
             settings.OPEN_METEO_FORECAST_URL,
@@ -102,21 +105,40 @@ def fetch_forecasts(points, start_iso, hours, session=None, sleeper=time.sleep, 
                 "wind_speed_unit": "mph",
                 "precipitation_unit": "inch",
                 "timezone": "UTC",
-                "forecast_days": forecast_days,
+                "forecast_hours": window["forecast_hours"],
+                "past_hours": window["past_hours"],
             },
             sleeper,
+        )
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        LAST_FORECAST_CALLS.append(
+            {"points": len(chunk), "status": response.status_code, "ms": elapsed_ms}
         )
         if response.status_code != 200:
             raise WeatherProviderError("open-meteo returned {0}".format(response.status_code))
         payload = response.json()
         blocks = payload if isinstance(payload, list) else [payload]
         if len(blocks) != len(chunk):
-            raise WeatherProviderError("open-meteo returned {0} locations for {1} points".format(len(blocks), len(chunk)))
+            raise WeatherProviderError(
+                "open-meteo returned {0} locations for {1} points".format(len(blocks), len(chunk))
+            )
+        hourly_maps = []
         for point, block in zip(chunk, blocks):
             hourly = _hourly_map(block)
+            if start_iso not in hourly:
+                raise WeatherProviderError("forecast does not cover {0}".format(start_iso))
             if use_cache:
-                _cache_put(_point_key(point, forecast_days), hourly)
-            fetched.append(hourly)
+                _cache_put(_point_key(point, window), hourly)
+            hourly_maps.append(hourly)
+        return hourly_maps
+
+    workers = min(3, len(chunks))
+    if workers == 1:
+        groups = [fetch_chunk(chunks[0])]
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            groups = list(pool.map(fetch_chunk, chunks))
+    fetched = [item for group in groups for item in group]
     fill = iter(fetched)
     return [item if item is not None else next(fill) for item in maps]
 
@@ -135,8 +157,13 @@ def _get_with_backoff(http, url, params, sleeper):
     return response
 
 
-def _point_key(point, forecast_days):
-    return (round(point["lat"], 2), round(point["lng"], 2), forecast_days)
+def _point_key(point, window):
+    return (
+        round(point["lat"], 2),
+        round(point["lng"], 2),
+        window["forecast_hours"],
+        window["past_hours"],
+    )
 
 
 def _cache_get(key):
@@ -154,11 +181,15 @@ def _cache_put(key, payload):
     _FORECAST_CACHE[key] = (time.time(), payload)
 
 
-def _forecast_days(start_iso, hours):
-    start = datetime.fromisoformat(start_iso).replace(tzinfo=timezone.utc)
+def _forecast_window(start_iso, hours):
+    start = datetime.fromisoformat(start_iso)
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
     end = start + timedelta(hours=hours)
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    return min(16, max(1, (end - today).days + 1))
+    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    past_hours = max(0, int((now - start).total_seconds() // 3600))
+    forecast_hours = max(1, int((end - now).total_seconds() // 3600) + 1)
+    return {"forecast_hours": min(168, forecast_hours), "past_hours": min(24, past_hours)}
 
 
 def _hourly_map(block):

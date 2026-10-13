@@ -94,6 +94,9 @@ def build_plan(payload, session=None):
     except WeatherProviderError as exc:
         raise PlanError("provider_unavailable", str(exc), 502)
     timings["weather_ms"] = int((time.perf_counter() - mark) * 1000)
+    from planner.clients import LAST_FORECAST_CALLS
+
+    timings["weather_requests"] = list(LAST_FORECAST_CALLS)
 
     mark = time.perf_counter()
     by_key = {point["key"]: forecasts[index] for index, point in enumerate(sample_points)}
