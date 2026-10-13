@@ -48,9 +48,10 @@ def classify_snow(inches_per_hour: float) -> str:
 def apply_load(wind_class: str, wind_mph: float, weight_lb: float) -> str:
     if wind_mph >= 55:
         return "No Travel"
-    if 45 <= wind_mph <= 54 and weight_lb > 30000:
+    # Same spans as the wind table: 45–54 is [45, 55) and 35–44 is [35, 45).
+    if 45 <= wind_mph < 55 and weight_lb > 30000:
         return "No Travel"
-    if 35 <= wind_mph <= 44 and weight_lb > 40000:
+    if 35 <= wind_mph < 45 and weight_lb > 40000:
         return "Severe"
     return wind_class
 

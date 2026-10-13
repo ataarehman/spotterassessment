@@ -46,7 +46,11 @@ REST_FRAMEWORK = {
     "UNAUTHENTICATED_USER": None,
 }
 
-OSRM_BASE_URL = os.environ.get("OSRM_BASE_URL", "https://router.project-osrm.org")
+GRAPHHOPPER_API_KEY = os.environ.get("GRAPHHOPPER_API_KEY", "")
+GRAPHHOPPER_ROUTE_URL = os.environ.get(
+    "GRAPHHOPPER_ROUTE_URL", "https://graphhopper.com/api/1/route"
+)
+GRAPHHOPPER_PROFILE = os.environ.get("GRAPHHOPPER_PROFILE", "car")
 OPEN_METEO_FORECAST_URL = os.environ.get(
     "OPEN_METEO_FORECAST_URL", "https://api.open-meteo.com/v1/forecast"
 )

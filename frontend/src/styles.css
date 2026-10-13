@@ -1,0 +1,21 @@
+:root { color: #f4efe4; background: #14181c; font-family: "Source Sans 3", sans-serif; }
+body { margin: 0; }
+.desk { padding: 24px; max-width: 1200px; margin: 0 auto; }
+h1 { font-family: Fraunces, serif; font-weight: 560; margin: 0 0 16px; }
+.kicker { letter-spacing: 0.14em; text-transform: uppercase; color: #f4b942; }
+form, .routes button, .map-panel button { font: inherit; }
+form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; }
+label { display: grid; gap: 4px; }
+input, select, button { background: #22282e; color: inherit; border: 1px solid #3c4650; border-radius: 8px; padding: 8px 10px; }
+button { cursor: pointer; }
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; margin-top: 20px; }
+.routes { list-style: none; padding: 0; margin: 0; }
+.routes button { width: 100%; text-align: left; }
+.routes ul { margin: 6px 0 12px; padding-left: 18px; color: #c9d0d6; }
+.pin { display: block; width: 10px; height: 10px; border-radius: 50%; background: #7d8b99; }
+.pin.Low { background: #7dcea0; }
+.pin.Moderate { background: #f4d35e; }
+.pin.High { background: #f4a261; }
+.pin.Severe { background: #e76f51; }
+.pin.No-Travel { background: #d00000; }
+@media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }

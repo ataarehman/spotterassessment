@@ -4,3 +4,4 @@ django-cors-headers>=4.3,<5
 requests>=2.31,<3
 pytest>=7.4,<9
 pytest-django>=4.7,<5
+gunicorn>=22,<24

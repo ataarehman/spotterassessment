@@ -63,6 +63,7 @@ def test_load_45_boundary():
     assert apply_load(wind_class, 45, 30000) == "Severe"
     assert apply_load(wind_class, 45, 40000) == "No Travel"
     assert apply_load(wind_class, 54, 35000) == "No Travel"
+    assert apply_load(wind_class, 54.9, 35000) == "No Travel"
 
 
 def test_load_35_boundary():
@@ -73,6 +74,7 @@ def test_load_35_boundary():
     assert apply_load(wind_class, 35, 40000) == "High"
     assert apply_load(wind_class, 35, 50000) == "Severe"
     assert apply_load(wind_class, 44, 45000) == "Severe"
+    assert apply_load(wind_class, 44.9, 45000) == "Severe"
 
 
 def test_worst_hazard_wins():
