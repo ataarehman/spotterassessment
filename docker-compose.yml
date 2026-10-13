@@ -1,0 +1,16 @@
+services:
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me}
+      DJANGO_DEBUG: "0"
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      GRAPHHOPPER_API_KEY: ${GRAPHHOPPER_API_KEY:-}
+      GRAPHHOPPER_PROFILE: ${GRAPHHOPPER_PROFILE:-car}
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    ports: ["127.0.0.1:${SPOTTER_HTTP_PORT:-8080}:80"]
+    depends_on: [api]
